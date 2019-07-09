@@ -115,6 +115,33 @@ func main() {
 
 	}
 
+	consSnippet := Snippet(`
+				func $VBtn() (r *$VBtnBuilder) {
+					r = &$VBtnBuilder{
+						tag: h.Tag("$v-btn"),
+					}
+					return
+				}`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
+
+	if compAPI.Slots != nil {
+		switch st := compAPI.Slots.(type) {
+		case []interface{}:
+			if len(st) > 0 {
+				consSnippet = Snippet(`
+				func $VBtn(children ...h.HTMLComponent) (r *$VBtnBuilder) {
+					r = &$VBtnBuilder{
+						tag: h.Tag("$v-btn").Children(children...),
+					}
+					return
+				}`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
+
+			}
+		default:
+			panic(fmt.Sprintf("%#+v", compAPI.Slots))
+		}
+	}
+
+
 	f := File("").Package("vuetify").Body(
 		Imports(
 			"context",
@@ -124,13 +151,7 @@ func main() {
 		),
 		Struct(builderName).FieldsSnippet("tag *h.HTMLTagBuilder"),
 
-		Snippet(`
-				func $VBtn() (r *$VBtnBuilder) {
-					r = &VBtnBuilder{
-						tag: h.Tag("$v-btn"),
-					}
-					return
-				}`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName),
+		consSnippet,
 		propSnips,
 		Snippet(`
 	func (b *$VBtnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
