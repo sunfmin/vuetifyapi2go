@@ -88,7 +88,7 @@ func main() {
 		}
 
 		switch funcParamTypeName {
-		case "function", "any":
+		case "function":
 		case "bool", "int":
 			propSnips.Append(
 				Snippet(`
@@ -140,7 +140,6 @@ func main() {
 			panic(fmt.Sprintf("%#+v", compAPI.Slots))
 		}
 	}
-
 
 	f := File("").Package("vuetify").Body(
 		Imports(
