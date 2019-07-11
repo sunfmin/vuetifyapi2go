@@ -77,12 +77,14 @@ func main() {
 			funcParamTypeName = jsToGoType(pt)
 		case []string:
 			if len(pt) > 0 {
-				funcParamTypeName = jsToGoType(pt[0])
+				funcParamTypeName = jsToGoType(pt)
 			}
 		case []interface{}:
 			if len(pt) > 0 {
-				funcParamTypeName = jsToGoType(pt[0])
+				funcParamTypeName = jsToGoType(pt)
 			}
+		case nil:
+			funcParamTypeName = "string"
 		default:
 			panic(fmt.Sprintf("%#+v", p))
 		}
@@ -172,27 +174,47 @@ func main() {
 	}
 }
 
-func jsToGoType(jstype interface{}) string {
+func jsToGoType(jstype interface{}) (r string) {
+
+	switch pt := jstype.(type) {
+	case []string:
+		for _, p := range pt {
+			if v, found := findJsToGoType(p); found {
+				return v
+			}
+		}
+	case []interface{}:
+		for _, p := range pt {
+			if v, found := findJsToGoType(p); found {
+				return v
+			}
+		}
+	}
+	r, _ = findJsToGoType(jstype)
+	return
+}
+
+func findJsToGoType(jstype interface{}) (string, bool) {
 	djstype := strings.ToLower(fmt.Sprintf("%s", jstype))
 	if djstype == "string" {
-		return "string"
+		return "string", true
 	}
 
 	if djstype == "boolean" {
-		return "bool"
+		return "bool", true
 	}
 
 	if djstype == "number" {
-		return "int"
+		return "int", true
 	}
 
 	if djstype == "array" {
-		return "[]string"
+		return "[]string", true
 	}
 
 	if djstype == "any" {
-		return "interface{}"
+		return "interface{}", true
 	}
 
-	return djstype
+	return djstype, false
 }
