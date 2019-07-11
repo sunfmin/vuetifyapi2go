@@ -100,21 +100,24 @@ func main() {
 		case "bool", "int":
 			propSnips.Append(
 				propFunc.BodySnippet(
-					`b.tag.Attr(":$color", fmt.Sprint(v))`,
+					`b.tag.Attr(":$color", fmt.Sprint(v))
+					return b`,
 					"$color", propAttrName,
 				),
 			)
 		case "[]string", "interface{}":
 			propSnips.Append(
 				propFunc.BodySnippet(
-					`b.tag.Attr(":$color", v)`,
+					`b.tag.Attr(":$color", v)
+					return b`,
 					"$color", propAttrName,
 				),
 			)
 		default:
 			propSnips.Append(
 				propFunc.BodySnippet(
-					`b.tag.Attr("$color", v)`,
+					`b.tag.Attr("$color", v)
+					return b`,
 					"$color", propAttrName,
 				),
 			)
