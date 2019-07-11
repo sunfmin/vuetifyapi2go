@@ -87,32 +87,38 @@ func main() {
 			panic(fmt.Sprintf("%#+v", p))
 		}
 
+		propFunc := Func(
+			"func (b *$VBtnBuilder) $Color(v $string) (r *$VBtnBuilder)",
+			"$VBtnBuilder", builderName,
+			"$color", propAttrName,
+			"$Color", funcName,
+			"$string", funcParamTypeName,
+		)
+
 		switch funcParamTypeName {
 		case "function":
 		case "bool", "int":
 			propSnips.Append(
-				Snippet(`
-						func (b *$VBtnBuilder) $Color(v $string) (r *$VBtnBuilder) {
-							b.tag.Attr(":$color", fmt.Sprint(v))
-							return b
-						}`, "$VBtnBuilder", builderName,
+				propFunc.BodySnippet(
+					`b.tag.Attr(":$color", fmt.Sprint(v))`,
 					"$color", propAttrName,
-					"$Color", funcName,
-					"$string", funcParamTypeName),
+				),
+			)
+		case "[]string", "interface{}":
+			propSnips.Append(
+				propFunc.BodySnippet(
+					`b.tag.Attr(":$color", v)`,
+					"$color", propAttrName,
+				),
 			)
 		default:
 			propSnips.Append(
-				Snippet(`
-						func (b *$VBtnBuilder) $Color(v $string) (r *$VBtnBuilder) {
-							b.tag.Attr("$color", v)
-							return b
-						}`, "$VBtnBuilder", builderName,
+				propFunc.BodySnippet(
+					`b.tag.Attr("$color", v)`,
 					"$color", propAttrName,
-					"$Color", funcName,
-					"$string", funcParamTypeName),
+				),
 			)
 		}
-
 	}
 
 	consSnippet := Snippet(`
@@ -178,6 +184,10 @@ func jsToGoType(jstype interface{}) string {
 	}
 
 	if djstype == "array" {
+		return "[]string"
+	}
+
+	if djstype == "any" {
 		return "interface{}"
 	}
 
