@@ -168,6 +168,7 @@ func main() {
 			"context",
 			"fmt",
 		).Body(
+			Snippet("\n"),
 			ImportAs("h", "github.com/theplant/htmlgo"),
 		),
 		Struct(builderName).FieldsSnippet("tag *h.HTMLTagBuilder"),
