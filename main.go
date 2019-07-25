@@ -32,6 +32,7 @@ type Prop struct {
 }
 
 var comp = flag.String("comp", "v-btn", "Vuetify Component Name")
+var list = flag.String("list", "", "List Components")
 
 func main() {
 	flag.Parse()
@@ -50,6 +51,16 @@ func main() {
 	err = json.Unmarshal(jsonBody, &api)
 	if err != nil {
 		panic(err)
+	}
+
+	listName := *list
+	if len(listName) > 0 {
+		for name, _ := range api {
+			if strings.Index(name, listName) >= 0 {
+				fmt.Println(name)
+			}
+		}
+		return
 	}
 
 	compName := *comp
@@ -164,6 +175,42 @@ func main() {
 		consSnippet,
 		propSnips,
 		Snippet(`
+
+	func (b *$VBtnBuilder) Children(children ...h.HTMLComponent) (r *$VBtnBuilder) {
+		b.tag.Children(children...)
+		return b
+	}
+
+	func (b *$VBtnBuilder) AppendChildren(children ...h.HTMLComponent) (r *$VBtnBuilder) {
+		b.tag.AppendChildren(children...)
+		return b
+	}
+
+	func (b *$VBtnBuilder) PrependChildren(children ...h.HTMLComponent) (r *$VBtnBuilder) {
+		b.tag.PrependChildren(children...)
+		return b
+	}
+
+	func (b *$VBtnBuilder) Class(names ...string) (r *$VBtnBuilder) {
+		b.tag.Class(names...)
+		return b
+	}
+
+	func (b *$VBtnBuilder) ClassIf(name string, add bool) (r *$VBtnBuilder) {
+		b.tag.ClassIf(name, add)
+		return b
+	}
+
+	func (b *$VBtnBuilder) On(name string, value string) (r *$VBtnBuilder) {
+		b.tag.Attr(fmt.Sprintf("v-on:%s", name), value)
+		return b
+	}
+
+	func (b *$VBtnBuilder) Bind(name string, value string) (r *$VBtnBuilder) {
+		b.tag.Attr(fmt.Sprintf("v-bind:%s", name), value)
+		return b
+	}
+
 	func (b *$VBtnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 		return b.tag.MarshalHTML(ctx)
 	}`, "$VBtnBuilder", builderName),
