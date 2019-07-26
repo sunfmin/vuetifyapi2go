@@ -181,6 +181,15 @@ func main() {
 		propSnips,
 		Snippet(`
 
+	func (b *$VBtnBuilder) SetAttr(k string, v interface{}) {
+		b.tag.SetAttr(k, v)
+	}
+
+	func (b *$VBtnBuilder) Attr(vs ...interface{}) (r *$VBtnBuilder) {
+		b.tag.Attr(vs...)
+		return b
+	}
+
 	func (b *$VBtnBuilder) Children(children ...h.HTMLComponent) (r *$VBtnBuilder) {
 		b.tag.Children(children...)
 		return b
@@ -218,7 +227,8 @@ func main() {
 
 	func (b *$VBtnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
 		return b.tag.MarshalHTML(ctx)
-	}`, "$VBtnBuilder", builderName),
+	}
+	`, "$VBtnBuilder", builderName),
 	)
 	err = f.Fprint(os.Stdout, context.TODO())
 	if err != nil {
