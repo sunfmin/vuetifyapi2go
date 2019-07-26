@@ -143,7 +143,9 @@ func main() {
 						tag: h.Tag("$v-btn"),
 					}
 					return
-				}`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
+				}
+
+				`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
 
 	if compAPI.Slots != nil {
 		switch st := compAPI.Slots.(type) {
@@ -155,7 +157,9 @@ func main() {
 						tag: h.Tag("$v-btn").Children(children...),
 					}
 					return
-				}`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
+				}
+
+				`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
 
 			}
 		default:
