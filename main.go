@@ -230,10 +230,7 @@ func main() {
 	}
 	`, "$VBtnBuilder", builderName),
 	)
-	err = f.Fprint(os.Stdout, context.TODO())
-	if err != nil {
-		panic(err)
-	}
+	f.MustFprint(os.Stdout, context.TODO())
 }
 
 func jsToGoType(jstype interface{}) (r string) {
@@ -256,7 +253,7 @@ func jsToGoType(jstype interface{}) (r string) {
 	return
 }
 
-func findJsToGoType(jstype interface{}) (string, bool) {
+func findJsToGoType(jstype interface{}) (r string, found bool) {
 	djstype := strings.ToLower(fmt.Sprintf("%s", jstype))
 	if djstype == "string" {
 		return "string", true
@@ -274,7 +271,11 @@ func findJsToGoType(jstype interface{}) (string, bool) {
 		return "[]string", true
 	}
 
-	if djstype == "any" {
+	if strings.HasSuffix(djstype, "[]") {
+		return "interface{}", false
+	}
+
+	if djstype == "any" || djstype == "object" {
 		return "interface{}", true
 	}
 
