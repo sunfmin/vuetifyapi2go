@@ -11,24 +11,37 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-
 	. "github.com/sunfmin/gogen"
 )
 
-type API map[string]*Component
-type Component struct {
-	Props       []Prop          `json:"props"`
-	Mixins      []string        `json:"mixins"`
-	Slots       interface{}     `json:"slots"`
-	ScopedSlots json.RawMessage `json:"scopedSlots"`
-	Events      json.RawMessage `json:"events"`
+type API struct {
+	Contributions struct {
+		Html struct {
+			Tags []*Component `json:"tags"`
+		} `json:"html"`
+	} `json:"contributions"`
 }
 
-type Prop struct {
+type Component struct {
+	Name       string       `json:"name"`
+	Attributes []*Attribute `json:"attributes"`
+	Slots      interface{}  `json:"slots"`
+	//Mixins      []string        `json:"mixins"`
+	//ScopedSlots json.RawMessage `json:"scopedSlots"`
+	//Events json.RawMessage `json:"events"`
+}
+
+type Attribute struct {
 	Name    string          `json:"name"`
 	Type    interface{}     `json:"type"`
 	Default json.RawMessage `json:"default"`
 	Source  *string         `json:"source"`
+	Value   *AttributeValue `json:"value"`
+}
+
+type AttributeValue struct {
+	Kind string      `json:"kind"`
+	Type interface{} `json:"type"`
 }
 
 var comp = flag.String("comp", "v-btn", "Vuetify Component Name")
@@ -47,7 +60,7 @@ func main() {
 		jsonBody = bs[1]
 	}
 	//doc := string(cb)
-	api := make(API)
+	api := API{}
 	err = json.Unmarshal(jsonBody, &api)
 	if err != nil {
 		panic(err)
@@ -55,9 +68,9 @@ func main() {
 
 	listName := *list
 	if len(listName) > 0 {
-		for name, _ := range api {
-			if strings.Index(name, listName) >= 0 {
-				fmt.Println(name)
+		for _, comp := range api.Contributions.Html.Tags {
+			if strings.Index(comp.Name, listName) >= 0 {
+				fmt.Println(comp.Name)
 			}
 		}
 		return
@@ -68,22 +81,36 @@ func main() {
 		panic("vuetifyapi2go -comp=v-btn")
 	}
 
-	constructorName := strcase.ToCamel(compName)
-	builderName := fmt.Sprintf("%sBuilder", constructorName)
-	compAPI := api[compName]
+	var compAPI *Component
+
+	for _, comp := range api.Contributions.Html.Tags {
+		if compName == comp.Name {
+			compAPI = comp
+			break
+		}
+	}
+
 	if compAPI == nil {
 		panic("component " + compName + " not exists")
 	}
+	compName = strcase.ToKebab(compName)
+
+	constructorName := strcase.ToCamel(compName)
+	builderName := fmt.Sprintf("%sBuilder", constructorName)
 
 	propSnips := Snippets()
 
-	for _, p := range compAPI.Props {
+	for _, p := range compAPI.Attributes {
 		propAttrName := strcase.ToKebab(p.Name)
 		funcName := strcase.ToCamel(p.Name)
 
 		funcParamTypeName := "string"
+		var typ = p.Type
+		if typ == nil {
+			typ = p.Value.Type
+		}
 
-		switch pt := p.Type.(type) {
+		switch pt := typ.(type) {
 		case string:
 			funcParamTypeName = jsToGoType(pt)
 		case []string:

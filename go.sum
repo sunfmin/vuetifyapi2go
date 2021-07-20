@@ -1,0 +1,4 @@
+github.com/iancoleman/strcase v0.2.0 h1:05I4QRnGpI0m37iZQRuskXh+w77mr6Z41lwQzuHLwW0=
+github.com/iancoleman/strcase v0.2.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
+github.com/sunfmin/gogen v0.0.0-20190729023015-b62f6c8c554a h1:px4HxcGWRh7pLNy1WIfbIgnyvVr3pHW77oV5A+aa5eQ=
+github.com/sunfmin/gogen v0.0.0-20190729023015-b62f6c8c554a/go.mod h1:j68UhnsQE0rdZ7U/KO32huo8Wa8U9PAW+w2MFdx0PQQ=
