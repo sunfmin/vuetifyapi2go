@@ -81,6 +81,13 @@ func main() {
 		panic("vuetifyapi2go -comp=v-btn")
 	}
 
+	if compName == "all" {
+		for _, comp := range api.Contributions.Html.Tags {
+			generateComponent(comp, strcase.ToCamel(comp.Name), true)
+		}
+		return
+	}
+
 	var compAPI *Component
 
 	for _, comp := range api.Contributions.Html.Tags {
@@ -90,6 +97,10 @@ func main() {
 		}
 	}
 
+	generateComponent(compAPI, compName, false)
+}
+
+func generateComponent(compAPI *Component, compName string, toFile bool) {
 	if compAPI == nil {
 		panic("component " + compName + " not exists")
 	}
@@ -148,7 +159,7 @@ func main() {
 		case "[]string", "interface{}":
 			propSnips.Append(
 				propFunc.BodySnippet(
-					`b.tag.Attr(":$color", v)
+					`b.tag.Attr(":$color", h.JSONString(v))
 					return b`,
 					"$color", propAttrName,
 				),
@@ -257,7 +268,17 @@ func main() {
 	}
 	`, "$VBtnBuilder", builderName),
 	)
-	f.MustFprint(os.Stdout, context.TODO())
+
+	output := os.Stdout
+	if toFile {
+		var err error
+		output, err = os.OpenFile(compName[2:] + ".go", os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			panic(err)
+		}
+		defer output.Close()
+	}
+	f.MustFprint(output, context.TODO())
 }
 
 func jsToGoType(jstype interface{}) (r string) {
