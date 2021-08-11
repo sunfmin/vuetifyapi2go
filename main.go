@@ -100,6 +100,27 @@ func main() {
 	generateComponent(compAPI, compName, false)
 }
 
+func goFileName(compName string) string {
+	return compName[2:] + ".go"
+}
+
+func goFixFileName(compName string) string {
+	return compName[2:] + "-fix.go"
+}
+
+func funcInFix(builderName string, funcName string, fixContentString string) bool {
+	funcSig, _ := Snippet("func (b *$VBtnBuilder) $Color(",
+		"$VBtnBuilder", builderName,
+		"$Color", funcName,
+	).MarshalCode(context.TODO())
+
+	if strings.Index(fixContentString, string(funcSig)) >= 0 {
+		return true
+	}
+
+	return false
+}
+
 func generateComponent(compAPI *Component, compName string, toFile bool) {
 	if compAPI == nil {
 		panic("component " + compName + " not exists")
@@ -111,9 +132,20 @@ func generateComponent(compAPI *Component, compName string, toFile bool) {
 
 	propSnips := Snippets()
 
+	fixContent, _ := ioutil.ReadFile(goFixFileName(compName))
+	fixContentString := string(fixContent)
+
 	for _, p := range compAPI.Attributes {
+		if strings.Index(p.Name, "(") >= 0 {
+			continue
+		}
+
 		propAttrName := strcase.ToKebab(p.Name)
 		funcName := strcase.ToCamel(p.Name)
+
+		if funcInFix(builderName, funcName, fixContentString) {
+			continue
+		}
 
 		funcParamTypeName := "string"
 		var typ = p.Type
@@ -176,20 +208,6 @@ func generateComponent(compAPI *Component, compName string, toFile bool) {
 	}
 
 	consSnippet := Snippet(`
-				func $VBtn() (r *$VBtnBuilder) {
-					r = &$VBtnBuilder{
-						tag: h.Tag("$v-btn"),
-					}
-					return
-				}
-
-				`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
-
-	if compAPI.Slots != nil {
-		switch st := compAPI.Slots.(type) {
-		case []interface{}:
-			if len(st) > 0 {
-				consSnippet = Snippet(`
 				func $VBtn(children ...h.HTMLComponent) (r *$VBtnBuilder) {
 					r = &$VBtnBuilder{
 						tag: h.Tag("$v-btn").Children(children...),
@@ -199,22 +217,58 @@ func generateComponent(compAPI *Component, compName string, toFile bool) {
 
 				`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
 
-			}
-		default:
-			panic(fmt.Sprintf("%#+v", compAPI.Slots))
-		}
+	marshalSnippet := Snippet(`
+
+	func (b *$VBtnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
+		return b.tag.MarshalHTML(ctx)
+	}
+`, "$VBtnBuilder", builderName)
+
+	imports := []string{"context", "fmt"}
+	if funcInFix(builderName, "MarshalHTML", fixContentString) {
+		marshalSnippet = Snippet("")
+		imports = []string{"fmt"}
+	}
+
+	//if compAPI.Slots != nil {
+	//	switch st := compAPI.Slots.(type) {
+	//	case []interface{}:
+	//		if len(st) > 0 {
+	//			consSnippet = Snippet(`
+	//			func $VBtn(children ...h.HTMLComponent) (r *$VBtnBuilder) {
+	//				r = &$VBtnBuilder{
+	//					tag: h.Tag("$v-btn").Children(children...),
+	//				}
+	//				return
+	//			}
+	//
+	//			`, "$VBtn", constructorName, "$VBtnBuilder", builderName, "$v-btn", compName)
+	//
+	//		}
+	//	default:
+	//		panic(fmt.Sprintf("%#+v", compAPI.Slots))
+	//	}
+	//}
+
+	var structCode Code = Struct(builderName).FieldsSnippet("tag *h.HTMLTagBuilder")
+	if strings.Index(fixContentString,
+		fmt.Sprintf("type %s struct", builderName)) >= 0 {
+		structCode = Snippet("")
+	}
+
+	if strings.Index(fixContentString,
+		fmt.Sprintf("func %s(", constructorName)) >= 0 {
+		consSnippet = Snippet("")
 	}
 
 	f := File("").Package("vuetify").Body(
 		Imports(
-			"context",
-			"fmt",
+			imports...,
 		).Body(
 			Snippet("\n"),
 			ImportAs("h", "github.com/theplant/htmlgo"),
 		),
-		Struct(builderName).FieldsSnippet("tag *h.HTMLTagBuilder"),
-
+		structCode,
 		consSnippet,
 		propSnips,
 		Snippet(`
@@ -263,16 +317,14 @@ func generateComponent(compAPI *Component, compName string, toFile bool) {
 		return b
 	}
 
-	func (b *$VBtnBuilder) MarshalHTML(ctx context.Context) (r []byte, err error) {
-		return b.tag.MarshalHTML(ctx)
-	}
 	`, "$VBtnBuilder", builderName),
+		marshalSnippet,
 	)
 
 	output := os.Stdout
 	if toFile {
 		var err error
-		output, err = os.OpenFile(compName[2:] + ".go", os.O_CREATE|os.O_RDWR, 0644)
+		output, err = os.OpenFile(goFileName(compName), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -282,19 +334,26 @@ func generateComponent(compAPI *Component, compName string, toFile bool) {
 }
 
 func jsToGoType(jstype interface{}) (r string) {
-
 	switch pt := jstype.(type) {
-	case []string:
-		for _, p := range pt {
-			if v, found := findJsToGoType(p); found {
-				return v
-			}
-		}
 	case []interface{}:
-		for _, p := range pt {
-			if v, found := findJsToGoType(p); found {
-				return v
-			}
+		val := fmt.Sprint(pt)
+		//fmt.Println(val)
+		if val == `[boolean string number]` {
+			return "interface{}"
+		} else if val == `[string number]` {
+			return "string"
+		} else if val == `[string boolean]` {
+			return "string"
+		} else if strings.Index(val, "object") >= 0 {
+			return "interface{}"
+		} else if strings.Index(val, "number") >= 0 {
+			return "int"
+		} else if strings.Index(val, "boolean") >= 0 {
+			return "bool"
+		} else if strings.Index(val, "string") >= 0 {
+			return "string"
+		} else {
+			return "interface{}"
 		}
 	}
 	r, _ = findJsToGoType(jstype)
@@ -307,16 +366,16 @@ func findJsToGoType(jstype interface{}) (r string, found bool) {
 		return "string", true
 	}
 
-	if djstype == "boolean" {
-		return "bool", true
-	}
-
 	if djstype == "number" {
 		return "int", true
 	}
 
+	if djstype == "boolean" {
+		return "bool", true
+	}
+
 	if djstype == "array" {
-		return "[]string", true
+		return "interface{}", true
 	}
 
 	if strings.HasSuffix(djstype, "[]") {
@@ -327,5 +386,5 @@ func findJsToGoType(jstype interface{}) (r string, found bool) {
 		return "interface{}", true
 	}
 
-	return djstype, false
+	return "interface{}", false
 }
