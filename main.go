@@ -105,7 +105,7 @@ func goFileName(compName string) string {
 }
 
 func goFixFileName(compName string) string {
-	return compName[2:] + "-fix.go"
+	return "fix-" + compName[2:] + ".go"
 }
 
 func funcInFix(builderName string, funcName string, fixContentString string) bool {
